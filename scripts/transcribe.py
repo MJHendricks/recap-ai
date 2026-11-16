@@ -1,28 +1,43 @@
 from faster_whisper import WhisperModel
+import sys
+import json
 
-audio_path = "../samples/meeting1.m4a"
-output_path = "../output/output.txt"
-model = WhisperModel("small", device="cpu", compute_type="int8")
+output_path = ""
 
-print("Transcribing...")
+def main(path = "../samples/meeting1.m4a",size="small"):
+    model = WhisperModel(size, device="cpu", compute_type="int8")
+    print("Transcribing...")
 
-segments, info = model.transcribe(
-    audio_path,
-    language="en",
-    vad_filter=True,
-    vad_parameters=dict(min_silence_duration_ms=500),
-    word_timestamps=True
-)
+    segments, info = model.transcribe(
+        path,
+        language="en",
+        vad_filter=True,
+        vad_parameters=dict(min_silence_duration_ms=500),
+        word_timestamps=True
+    )
 
-# store all lines into an array
-output = []
-for segment in segments:
-    output.append(f"[{segment.start:.2f}s -> {segment.end:.2f}s] {segment.text}")
+    # output
+    json_lines = []
+    plaintext_lines = []
+    for segment in segments:
+        clean_text = segment.text.strip()
 
-print("Saving File...")
-# save the array into a file, line by line.
-with open(output_path,"w") as file:
-    for line in output:
-        file.write(line)
+        # without timestamps for txt file
+        plaintext_lines.append(clean_text)
+        # with timestamps for json file
+        json_lines.append({"start":segment.start,"end":segment.end,"text":clean_text})
 
-print("File Saved.")
+    print("Saving File...")
+    # save json
+    with open("../output/output.json","w",encoding="utf-8") as json_file:
+        json.dump(json_lines,json_file,indent=4,ensure_ascii=False)
+
+    # save txt
+    with open("../output/output.txt","w") as text_file:
+        text_file.write(" ".join(plaintext_lines))
+
+    print("Files Saved.")
+
+main()
+
+
